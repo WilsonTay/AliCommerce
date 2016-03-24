@@ -44,6 +44,7 @@ namespace WooCommerceNET.WooCommerce
         public List<ProductVariations> variations { get; set; } 
 
         public List<ProductAttribute> attributes { get; set; } 
+        public string sku { get; set; }
     }
 
     public class ProductReview

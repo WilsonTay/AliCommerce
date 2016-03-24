@@ -48,6 +48,7 @@ namespace WooCommerce.Automation
         public string PostedUrl { get; set; }
         public string SourceUrl { get; set; }
         public string Name { get; set; }
+        public string Reason { get; set; }
     }
 
     public class AliExpressPoster
@@ -147,6 +148,17 @@ namespace WooCommerce.Automation
                     imageUrls.Add(src);
                 }
 
+                // If no image urls, means the item only has one image. Take the main image.
+                if (!imageUrls.Any())
+                {
+                    var node =
+                        doc.DocumentNode.Descendants().FirstOrDefault(a => a.Name.Equals("div") && a.Id.Equals("img"));
+
+                    var img = node.Descendants().FirstOrDefault(a => a.Name.Equals("img") && a.Attributes["src"] != null);
+
+                    imageUrls.Add(img.Attributes["src"].Value);
+                }
+
 
                 var objectId = doc.DocumentNode.Descendants("input")
                     .FirstOrDefault(
@@ -194,8 +206,25 @@ namespace WooCommerce.Automation
                 })
                     .ToList();
 
-                //product.categories = new List<string>() { "89" };
+                var productIdElement = doc.DocumentNode.Descendants()
+                    .FirstOrDefault(a => a.Name.Equals("input") && a.Attributes["name"] != null
+                                         && a.Attributes["name"].Value.Equals("objectId"));
 
+                product.sku = productIdElement.Attributes["value"].Value;
+
+                var existingProducts = wc.GetProducts(new Dictionary<string, string>
+                {
+                    {"filter[sku]", product.sku}
+                }).Result;
+                if (existingProducts.Any())
+                {
+                    return new AliExpressPostResult
+                    {
+                        SourceUrl = url,
+                        Success = false,
+                        Reason = "Product already exist"
+                    };
+                }
 
                 var variationDiv =
                     doc.DocumentNode.Descendants()
@@ -205,8 +234,17 @@ namespace WooCommerce.Automation
 
                 if (variationDiv != null)
                 {
-                    product.type = "variable";
+
                     var dls = variationDiv.Descendants().Where(a => a.Name.Equals("dl"));
+
+                    if (dls.Any())
+                    {
+                        product.type = "variable";
+                    }
+                    else
+                    {
+                        product.type = "simple";
+                    }
 
                     foreach (var dl in dls)
                     {

@@ -136,6 +136,37 @@ namespace WooCommerce.UI
 
         private void listView1_DoubleClick(object sender, EventArgs e)
         {
+        
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Please select one result.");
+                return;
+            }
+
+            var selected = listView1.SelectedItems[0];
+            if (selected != null)
+            {
+                var url = selected.SubItems[1].Text;
+
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    Process.Start(url);
+                }
+            }
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Please select one result.");
+                return;
+            }
+
             var selected = listView1.SelectedItems[0];
             if (selected != null)
             {
