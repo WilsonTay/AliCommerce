@@ -97,7 +97,10 @@
     <Compile Include="WooCommerce\Download.cs" />
     <Compile Include="WooCommerce\Order.cs" />
     <Compile Include="WooCommerce\Product.cs" />
+    <Compile Include="WooCommerce\ProductAttribute.cs" />
     <Compile Include="WooCommerce\ProductImage.cs" />
+    <Compile Include="WooCommerce\ProductSpecificAttribute.cs" />
+    <Compile Include="WooCommerce\ProductVariations.cs" />
     <Compile Include="WooCommerce\Report.cs" />
     <Compile Include="WooCommerce\Store.cs" />
     <Compile Include="WooCommerce\WCObject.cs" />

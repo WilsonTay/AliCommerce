@@ -35,6 +35,11 @@ namespace WooCommerceNET.WooCommerce
             return await API.PostRestful("customers", new { customer = c }, parms);
         }
 
+        public async Task<string> PostProductCategory(ProductCategory c, Dictionary<string, string> parms = null)
+        {
+            return await API.PostRestful("products/categories/", new { product_category = c }, parms);
+        }
+
         public async Task<string> UpdateCustomer(int id, object c, Dictionary<string, string> parms = null)
         {
             return await API.PutRestful("customers/" + id.ToString(), new { customer = c }, parms);
@@ -229,6 +234,11 @@ namespace WooCommerceNET.WooCommerce
         public async Task<string> PostProduct(Product p, Dictionary<string, string> parms = null)
         {
             return await API.PostRestful("products", new { product = p }, parms);
+        }
+
+        public string PostProductSync(Product p, Dictionary<string, string> parms = null)
+        {
+            return API.PostRestfulSync("products", new { product = p }, parms);
         }
 
         public async Task<string> UpdateProduct(int id, object p, Dictionary<string, string> parms = null)

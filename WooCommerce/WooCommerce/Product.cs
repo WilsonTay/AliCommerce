@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WooCommerce.WooCommerce;
 
 namespace WooCommerceNET.WooCommerce
 {
@@ -13,6 +14,7 @@ namespace WooCommerceNET.WooCommerce
 
     public class Product
     {
+        public string type { get; set; }
         public int id { get; set; }
 
         public string title { get; set; }
@@ -38,6 +40,10 @@ namespace WooCommerceNET.WooCommerce
         public string cover { get; set; }
 
         public bool enable_html_description { get; set; }
+
+        public List<ProductVariations> variations { get; set; } 
+
+        public List<ProductAttribute> attributes { get; set; } 
     }
 
     public class ProductReview

@@ -46,10 +46,10 @@ namespace WooCommerceNET
 
             return json;
         }
-
-        public async Task<string> PostRestful(string endpoint, object jsonObject, Dictionary<string, string> parms = null)
+        public string PostRestfulSync(string endpoint, object jsonObject, Dictionary<string, string> parms = null)
         {
             var client = new RestClient(wc_url);
+            // client.Timeout = TimeSpan.FromMinutes(5);
             client.IgnoreResponseStatusCode = true; //This will return the json error message instead of throw out an exception.
             var request = new RestRequest(GetOAuthEndPoint("POST", endpoint, parms), Method.POST);
             var result = string.Empty;
@@ -58,7 +58,37 @@ namespace WooCommerceNET
 
             try
             {
-                var response = await client.Execute(request).ConfigureAwait(false);
+                var response = client.Execute(request).Result;
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    //OK
+                }
+                else
+                {
+                    result = Encoding.UTF8.GetString(response.RawBytes, 0, response.RawBytes.Length);
+                    //NOK
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+
+            return result;
+        }
+        public async Task<string> PostRestful(string endpoint, object jsonObject, Dictionary<string, string> parms = null)
+        {
+            var client = new RestClient(wc_url);
+           // client.Timeout = TimeSpan.FromMinutes(5);
+            client.IgnoreResponseStatusCode = true; //This will return the json error message instead of throw out an exception.
+            var request = new RestRequest(GetOAuthEndPoint("POST", endpoint, parms), Method.POST);
+            var result = string.Empty;
+
+            request.AddBody(jsonObject);
+
+            try
+            {
+                var response = await client.Execute(request);
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     //OK
