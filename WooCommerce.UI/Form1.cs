@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
@@ -10,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WooCommerce.Automation;
+using WooCommerce.Automation.Models;
 using WooCommerceNET;
 using WooCommerceNET.WooCommerce;
 
@@ -26,22 +28,11 @@ namespace WooCommerce.UI
 
         private void button1_Click(object sender, EventArgs e)
         {
-            //RestAPI rest = new RestAPI("http://dealliaomah.com/wc-api/v3/",
-            //       "ck_3586593efc9d88b09d62356e76924199b12d1221",
-            //       "cs_ec7a0eb857e95790f7bcd1828b37d9fe7542f154");
-            //WCObject wc = new WCObject(rest);
-
-
-
-            //new Thread(() =>
-            //{
-            //    var category1 = GetCategory(wc, "wilson1", "");
-            //    var category2 = GetCategory(wc, "wilson2", "wilson1");
-            //    var category3 = GetCategory(wc, "wilson3", "wilson2");
-
-            //    Console.WriteLine(category3);
-            //}).Start();
-            //return;
+            var restAPIKey = ConfigurationManager.AppSettings["wooCommerceRestAPIKey"];
+            var restAPISecret = ConfigurationManager.AppSettings["wooCommerceRestAPISecret"];
+            var priceLowCap = ConfigurationManager.AppSettings["priceLowCap"];
+            var priceHighCap = ConfigurationManager.AppSettings["priceHighCap"];
+            var maxItemPerCategory = int.Parse(ConfigurationManager.AppSettings["maxItemPerCategory"]);
 
             if (!started)
             {
@@ -58,7 +49,7 @@ namespace WooCommerce.UI
                             break;
                         try
                         {
-                            var poster = new AliExpressPoster();
+                            var poster = new AliExpressPoster(restAPIKey, restAPISecret);
                             var result = poster.Generate(text);
 
                             RunOnUIThread(() =>
@@ -73,7 +64,7 @@ namespace WooCommerce.UI
 
                         Thread.Sleep(5000);
                     }
- 
+
                     RunOnUIThread(() =>
                     {
                         HandleStop();
@@ -136,7 +127,7 @@ namespace WooCommerce.UI
 
         private void listView1_DoubleClick(object sender, EventArgs e)
         {
-        
+
         }
 
         private void button2_Click(object sender, EventArgs e)

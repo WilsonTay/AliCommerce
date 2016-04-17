@@ -7,104 +7,33 @@ using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
+using WooCommerce.Automation.Models;
 using WooCommerce.WooCommerce;
 using WooCommerceNET;
 using WooCommerceNET.WooCommerce;
 
 namespace WooCommerce.Automation
 {
-    public class WooCommerceResult
-    {
-        public WooCommerceResultProduct product { get; set; }
-    }
-
-    public class WooCommerceResultProduct
-    {
-        public string permalink { get; set; }
-        public string title { get; set; }
-    }
-    class AttributeOptionsGroup
-    {
-        public string AttributeName { get; set; }
-
-        public IList<SingleAttributeOptions> Options { get; set; }
-
-        public AttributeOptionsGroup()
-        {
-            Options = new List<SingleAttributeOptions>();
-        }
-    }
-
-    class SingleAttributeOptions
-    {
-
-        public string AttributeValue { get; set; }
-        public string ImageUrl { get; set; }
-        public int Id { get; set; }
-    }
-
-    public class AliExpressPostResult
-    {
-        public bool Success { get; set; }
-        public string PostedUrl { get; set; }
-        public string SourceUrl { get; set; }
-        public string Name { get; set; }
-        public string Reason { get; set; }
-    }
-
     public class AliExpressPoster
     {
-        private ProductCategory GetCategory(WCObject wc, string categoryName, string parentCategoryName)
+        private static string chromeUserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36";
+
+        private readonly string restAPIKey = "";
+        private readonly string restAPISecret = "";
+
+        public AliExpressPoster(string restAPIKey, string restAPISecret)
         {
-            var categories = wc.GetProductCategories().Result;
-            var category = categories.FirstOrDefault(a => WebUtility.HtmlDecode(a.name).Equals(categoryName));
-            ProductCategory parentCategory = null;
-
-            if (!string.IsNullOrWhiteSpace(parentCategoryName))
-            {
-                parentCategory = categories.First(a => WebUtility.HtmlDecode(a.name).Equals(parentCategoryName));
-            }
-
-            if (category == null)
-            {
-                var newcategory = new ProductCategory
-                {
-                    name = categoryName,
-                    count = 0,
-                    description = categoryName,
-                    id = 0,
-                    slug = categoryName
-                };
-
-                if (parentCategory != null)
-                {
-                    newcategory.parent = parentCategory.id;
-                }
-
-                var result = wc.PostProductCategory(newcategory).Result;
-
-                // Pause awhile because cannot retrieve category right after posting.
-                Thread.Sleep(1000);
-                category = categories.FirstOrDefault(a => a.name.Equals(categoryName));
-                return category;
-
-            }
-            else
-            {
-                return category;
-            }
+            this.restAPIKey = restAPIKey;
+            this.restAPISecret = restAPISecret;
         }
-
-        private static string chromeUserAgent =
-         "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36";
 
         public AliExpressPostResult Generate(string url)
         {
             try
             {
                 RestAPI rest = new RestAPI("http://dealliaomah.com/wc-api/v3/",
-                 "ck_d37363ee8aa5005e4a8aff581c88d460299d4dd6",
-                 "cs_2ed0dce5aad5c79ad7271d7166743b583e14e2d0");
+                 this.restAPIKey,
+                 this.restAPISecret);
                 WCObject wc = new WCObject(rest);
 
                 HtmlNode.ElementsFlags.Remove("form");
@@ -136,8 +65,6 @@ namespace WooCommerce.Automation
 
                     categoryName = model.id.ToString();
                 }
-                //Console.WriteLine(categories);
-                //return null;
 
                 var imageUrls = new List<string>();
                 foreach (
@@ -191,8 +118,6 @@ namespace WooCommerce.Automation
                 var index2 = description.LastIndexOf('\'');
                 product.description = description.Substring(index1, index2 - index1);
 
-                //product.regular_price = 200.00;
-                //product.sale_price = 100.00;
                 product.in_stock = true;
                 product.enable_html_description = true;
 
@@ -443,13 +368,8 @@ namespace WooCommerce.Automation
                 product.shipping_required = true;
                 product.shipping_class = "free-international-shipping";
 
-
-
-
-
                 var resultStr = wc.PostProduct(product).Result;
                 var result = JsonConvert.DeserializeObject<WooCommerceResult>(resultStr);
-                Console.WriteLine(result);
 
                 return new AliExpressPostResult
                 {
@@ -468,5 +388,48 @@ namespace WooCommerce.Automation
                 };
             }
         }
+
+
+        private ProductCategory GetCategory(WCObject wc, string categoryName, string parentCategoryName)
+        {
+            var categories = wc.GetProductCategories().Result;
+            var category = categories.FirstOrDefault(a => WebUtility.HtmlDecode(a.name).Equals(categoryName));
+            ProductCategory parentCategory = null;
+
+            if (!string.IsNullOrWhiteSpace(parentCategoryName))
+            {
+                parentCategory = categories.First(a => WebUtility.HtmlDecode(a.name).Equals(parentCategoryName));
+            }
+
+            if (category == null)
+            {
+                var newcategory = new ProductCategory
+                {
+                    name = categoryName,
+                    count = 0,
+                    description = categoryName,
+                    id = 0,
+                    slug = categoryName
+                };
+
+                if (parentCategory != null)
+                {
+                    newcategory.parent = parentCategory.id;
+                }
+
+                var result = wc.PostProductCategory(newcategory).Result;
+
+                // Pause awhile because cannot retrieve category right after posting.
+                Thread.Sleep(1000);
+                category = categories.FirstOrDefault(a => a.name.Equals(categoryName));
+                return category;
+
+            }
+            else
+            {
+                return category;
+            }
+        }
+
     }
 }
