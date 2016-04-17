@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
@@ -81,6 +82,9 @@ namespace WooCommerce.Automation
                 }
 
                 var result = wc.PostProductCategory(newcategory).Result;
+
+                // Pause awhile because cannot retrieve category right after posting.
+                Thread.Sleep(1000);
                 category = categories.FirstOrDefault(a => a.name.Equals(categoryName));
                 return category;
 
@@ -99,8 +103,8 @@ namespace WooCommerce.Automation
             try
             {
                 RestAPI rest = new RestAPI("http://dealliaomah.com/wc-api/v3/",
-                 "ck_3586593efc9d88b09d62356e76924199b12d1221",
-                 "cs_ec7a0eb857e95790f7bcd1828b37d9fe7542f154");
+                 "ck_d37363ee8aa5005e4a8aff581c88d460299d4dd6",
+                 "cs_2ed0dce5aad5c79ad7271d7166743b583e14e2d0");
                 WCObject wc = new WCObject(rest);
 
                 HtmlNode.ElementsFlags.Remove("form");
@@ -187,8 +191,8 @@ namespace WooCommerce.Automation
                 var index2 = description.LastIndexOf('\'');
                 product.description = description.Substring(index1, index2 - index1);
 
-                product.regular_price = 200.00;
-                product.sale_price = 100.00;
+                //product.regular_price = 200.00;
+                //product.sale_price = 100.00;
                 product.in_stock = true;
                 product.enable_html_description = true;
 
@@ -231,6 +235,40 @@ namespace WooCommerce.Automation
                         .FirstOrDefault(a => a.GetAttributeValue("id", string.Empty).Equals("product-info-sku"));
 
                 var attributeOptionsGroupList = new List<AttributeOptionsGroup>();
+
+                var highPriceElement = doc.DocumentNode.Descendants()
+                   .FirstOrDefault(
+                       a =>
+                           a.Name.Equals("span") && a.Attributes["itemprop"] != null &&
+                           a.Attributes["itemprop"].Value.Equals("highPrice"));
+
+                var priceElement = doc.DocumentNode.Descendants()
+                 .FirstOrDefault(
+                     a =>
+                         a.Name.Equals("span") && a.Attributes["itemprop"] != null &&
+                         a.Attributes["itemprop"].Value.Equals("price"));
+
+                if (highPriceElement != null)
+                {
+                    product.sale_price = Math.Round(double.Parse(highPriceElement.InnerText) * 4 * 1.2, 1);
+                }
+
+                else if (priceElement != null)
+                {
+                    product.sale_price = Math.Round(double.Parse(priceElement.InnerText) * 4 * 1.2, 1);
+                }
+                else
+                {
+                    return new AliExpressPostResult
+                    {
+                        SourceUrl = url,
+                        Success = false,
+                        Reason = "Unable to retrieve price."
+                    };
+                }
+
+                product.regular_price = Math.Round(product.sale_price.Value * 1.8, 1);
+
 
                 if (variationDiv != null)
                 {
@@ -401,6 +439,13 @@ namespace WooCommerce.Automation
 
                     product.attributes.Add(attribute);
                 }
+
+                product.shipping_required = true;
+                product.shipping_class = "free-international-shipping";
+
+
+
+
 
                 var resultStr = wc.PostProduct(product).Result;
                 var result = JsonConvert.DeserializeObject<WooCommerceResult>(resultStr);

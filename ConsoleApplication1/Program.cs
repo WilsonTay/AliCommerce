@@ -65,6 +65,8 @@ namespace ConsoleApplication1
 
         static void Main(string[] args)
         {
+            var included = new StreamReader(File.OpenRead("categories.txt")).ReadToEnd().Split('\n').Select(a => a.Trim('\r'));
+
             while (true)
             {
                 try
@@ -73,14 +75,15 @@ namespace ConsoleApplication1
                     var categoryUrl =
                         "http://www.aliexpress.com/all-wholesale-products.html?spm=2114.11010108.22.1.B0Jzm8";
                     HtmlDocument doc =
-                        new HtmlWeb {UserAgent = chromeUserAgent}.Load(categoryUrl);
+                        new HtmlWeb { UserAgent = chromeUserAgent }.Load(categoryUrl);
 
                     var anchors =
                         doc.DocumentNode.Descendants()
                             .Where(
                                 a =>
                                     a.Name.Equals("a") && a.Attributes["href"] != null &&
-                                    a.Attributes["href"].Value.Contains("/category/"))
+                                    a.Attributes["href"].Value.Contains("/category/") &&
+                                    included.Contains(a.InnerText))
                             .ToList();
 
                     Console.WriteLine("Retrieved " + anchors.Count + " categories");
@@ -88,12 +91,12 @@ namespace ConsoleApplication1
 
                     Console.WriteLine("Start processing category " + randomAnchor);
 
-                    doc = new HtmlWeb {UserAgent = chromeUserAgent}.Load(randomAnchor);
+                    doc = new HtmlWeb { UserAgent = chromeUserAgent }.Load(randomAnchor);
                     var productAnchors = doc.DocumentNode.Descendants()
                         .Where(
                             a =>
                                 a.Name.Equals("a") && a.Attributes["class"] != null &&
-                                a.Attributes["class"].Value.Equals("product ")
+                                a.Attributes["class"].Value.Trim().Equals("product")
                                 && a.Attributes["href"] != null && a.Attributes["href"].Value.Contains("/item/"))
                         .ToList();
 

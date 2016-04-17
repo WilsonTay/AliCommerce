@@ -45,6 +45,10 @@ namespace WooCommerceNET.WooCommerce
 
         public List<ProductAttribute> attributes { get; set; } 
         public string sku { get; set; }
+
+        public bool shipping_required { get; set; }
+
+        public string shipping_class { get; set; }
     }
 
     public class ProductReview
