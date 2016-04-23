@@ -14,6 +14,12 @@ using WooCommerceNET.WooCommerce;
 
 namespace WooCommerce.Automation
 {
+    public enum PostType
+    {
+        Draft = 0,
+        Publish = 1
+    }
+
     public class AliExpressPoster
     {
         private static string chromeUserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36";
@@ -21,17 +27,64 @@ namespace WooCommerce.Automation
         private readonly string restAPIKey = "";
         private readonly string restAPISecret = "";
 
-        public AliExpressPoster(string restAPIKey, string restAPISecret)
+        private readonly PostType postType;
+        private double priceMarkupPercentage = 0.0;
+        private double usdToMyrCurrencyRate = 0.0;
+
+        public AliExpressPoster(
+            string restAPIKey,
+            string restAPISecret,
+            PostType postType,
+            double priceMarkupPercentage,
+            double usdToMyrCurrencyRate)
         {
             this.restAPIKey = restAPIKey;
             this.restAPISecret = restAPISecret;
+            this.postType = postType;
+            this.priceMarkupPercentage = priceMarkupPercentage;
+            this.usdToMyrCurrencyRate = usdToMyrCurrencyRate;
+        }
+
+        private double getMarkedUpAndConvertedPrice(double price)
+        {
+            price = this.priceMarkupPercentage * price * this.usdToMyrCurrencyRate;
+
+            return price;
+        }
+
+        private void handlePrice(string source, Product product)
+        {
+            var maxPrice = getQuotes(source, "window.runParams.maxPrice");
+
+            if (source.Contains("window.runParams.actMaxPrice"))
+            {
+                var maxDiscountedPrice = getQuotes(source, "window.runParams.actMaxPrice");
+                product.sale_price = getMarkedUpAndConvertedPrice(Double.Parse(maxDiscountedPrice));
+                product.regular_price = getMarkedUpAndConvertedPrice(Double.Parse(maxPrice));
+            }
+            else
+            {
+                product.price = getMarkedUpAndConvertedPrice(Double.Parse(maxPrice));
+            }
+
+        }
+
+        private string getQuotes(string source, string stringToFind)
+        {
+            var index = source.IndexOf(stringToFind);
+            var startIndex = source.IndexOf("\"", index);
+            var endIndex = source.IndexOf("\"", startIndex + 1);
+
+            var inBetween = source.Substring(startIndex, endIndex - startIndex).Trim('"');
+
+            return inBetween;
         }
 
         public AliExpressPostResult Generate(string url)
         {
             try
             {
-                RestAPI rest = new RestAPI("http://dealliaomah.com/wc-api/v3/",
+                RestAPI rest = new RestAPI("http://dealswhat.com/wc-api/v3/",
                  this.restAPIKey,
                  this.restAPISecret);
                 WCObject wc = new WCObject(rest);
@@ -67,15 +120,18 @@ namespace WooCommerce.Automation
                 }
 
                 var imageUrls = new List<string>();
+
+                var imageThumbnailContainer =
+                    doc.DocumentNode.Descendants("ul")
+                        .FirstOrDefault(
+                            a =>
+                                a.Attributes.Contains("class") &&
+                                a.Attributes["class"].Value.Equals("image-thumb-list"));
                 foreach (
                     HtmlNode link in
-                        doc.DocumentNode.Descendants("li")
-                            .Where(
-                                a =>
-                                    a.Attributes.Contains("class") &&
-                                    a.Attributes["class"].Value.Equals("image-nav-item")))
+                        imageThumbnailContainer.Descendants("img"))
                 {
-                    var src = link.Descendants("img").ToList()[0].Attributes["src"].Value;
+                    var src = link.Attributes["src"].Value;
                     imageUrls.Add(src);
                 }
 
@@ -83,7 +139,7 @@ namespace WooCommerce.Automation
                 if (!imageUrls.Any())
                 {
                     var node =
-                        doc.DocumentNode.Descendants().FirstOrDefault(a => a.Name.Equals("div") && a.Id.Equals("img"));
+                        doc.DocumentNode.Descendants().FirstOrDefault(a => a.Name.Equals("div") && a.Id.Equals("magnifier"));
 
                     var img = node.Descendants().FirstOrDefault(a => a.Name.Equals("img") && a.Attributes["src"] != null);
 
@@ -157,43 +213,44 @@ namespace WooCommerce.Automation
 
                 var variationDiv =
                     doc.DocumentNode.Descendants()
-                        .FirstOrDefault(a => a.GetAttributeValue("id", string.Empty).Equals("product-info-sku"));
+                        .FirstOrDefault(a => a.GetAttributeValue("id", string.Empty).Equals("j-product-info-sku"));
 
                 var attributeOptionsGroupList = new List<AttributeOptionsGroup>();
 
-                var highPriceElement = doc.DocumentNode.Descendants()
-                   .FirstOrDefault(
-                       a =>
-                           a.Name.Equals("span") && a.Attributes["itemprop"] != null &&
-                           a.Attributes["itemprop"].Value.Equals("highPrice"));
+                var source = doc.DocumentNode.OuterHtml;
+                handlePrice(source, product);
+                //var highPriceElement = doc.DocumentNode.Descendants()
+                //   .FirstOrDefault(
+                //       a =>
+                //           a.Name.Equals("span") && a.Attributes["itemprop"] != null &&
+                //           a.Attributes["itemprop"].Value.Equals("highPrice"));
 
-                var priceElement = doc.DocumentNode.Descendants()
-                 .FirstOrDefault(
-                     a =>
-                         a.Name.Equals("span") && a.Attributes["itemprop"] != null &&
-                         a.Attributes["itemprop"].Value.Equals("price"));
+                //var priceElement = doc.DocumentNode.Descendants()
+                // .FirstOrDefault(
+                //     a =>
+                //         a.Name.Equals("span") && a.Attributes["itemprop"] != null &&
+                //         a.Attributes["itemprop"].Value.Equals("price"));
 
-                if (highPriceElement != null)
-                {
-                    product.sale_price = Math.Round(double.Parse(highPriceElement.InnerText) * 4 * 1.2, 1);
-                }
+                //if (highPriceElement != null)
+                //{
+                //    product.sale_price = Math.Round(double.Parse(highPriceElement.InnerText) * 4 * 1.2, 1);
+                //}
 
-                else if (priceElement != null)
-                {
-                    product.sale_price = Math.Round(double.Parse(priceElement.InnerText) * 4 * 1.2, 1);
-                }
-                else
-                {
-                    return new AliExpressPostResult
-                    {
-                        SourceUrl = url,
-                        Success = false,
-                        Reason = "Unable to retrieve price."
-                    };
-                }
+                //else if (priceElement != null)
+                //{
+                //    product.sale_price = Math.Round(double.Parse(priceElement.InnerText) * 4 * 1.2, 1);
+                //}
+                //else
+                //{
+                //    return new AliExpressPostResult
+                //    {
+                //        SourceUrl = url,
+                //        Success = false,
+                //        Reason = "Unable to retrieve price."
+                //    };
+                //}
 
-                product.regular_price = Math.Round(product.sale_price.Value * 1.8, 1);
-
+                //product.regular_price = Math.Round(product.sale_price.Value * 1.8, 1);
 
                 if (variationDiv != null)
                 {
@@ -368,6 +425,8 @@ namespace WooCommerce.Automation
                 product.shipping_required = true;
                 product.shipping_class = "free-international-shipping";
 
+                 product.status = postType.ToString().ToLower();
+
                 var resultStr = wc.PostProduct(product).Result;
                 var result = JsonConvert.DeserializeObject<WooCommerceResult>(resultStr);
 
@@ -384,7 +443,8 @@ namespace WooCommerce.Automation
                 return new AliExpressPostResult
                 {
                     SourceUrl = url,
-                    Success = false
+                    Success = false,
+                    Reason = ex.Message
                 };
             }
         }

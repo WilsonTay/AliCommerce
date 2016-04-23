@@ -20,3 +20,25 @@ C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce\WooCommerce\obj
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce\WooCommerce\obj\Debug\WooCommerce.dll
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce\WooCommerce\obj\Debug\WooCommerce.pdb
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce\WooCommerce\obj\Debug\WooCommerce.csprojResolveAssemblyReference.cache
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\WooCommerce.dll.config
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\WooCommerce.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\WooCommerce.pdb
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Microsoft.Threading.Tasks.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Microsoft.Threading.Tasks.Extensions.Desktop.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Microsoft.Threading.Tasks.Extensions.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Newtonsoft.Json.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\RestSharp.Portable.Core.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\RestSharp.Portable.HttpClient.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\WooCommerceNET.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Microsoft.Threading.Tasks.xml
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Microsoft.Threading.Tasks.Extensions.xml
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Microsoft.Threading.Tasks.Extensions.Desktop.xml
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Newtonsoft.Json.xml
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\RestSharp.Portable.Core.xml
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\RestSharp.Portable.HttpClient.xml
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.csprojResolveAssemblyReference.cache
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.Form1.resources
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.Properties.Resources.resources
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.csproj.GenerateResource.Cache
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.pdb

@@ -65,6 +65,16 @@ namespace ConsoleApplication1
             var priceHighCap = ConfigurationManager.AppSettings["priceHighCap"];
             var maxItemPerCategory = int.Parse(ConfigurationManager.AppSettings["maxItemPerCategory"]);
 
+            var markUpPercentage = Double.Parse(ConfigurationManager.AppSettings["markUpPercentage"]);
+            var usdtoMyrCurrencyRate = Double.Parse(ConfigurationManager.AppSettings["usdtoMyrCurrencyRate"]);
+            var postTypeStr = ConfigurationManager.AppSettings["postAs"];
+
+            PostType postType = PostType.Draft;
+            if (postTypeStr.ToLower().Equals("publish"))
+            {
+                postType = PostType.Publish;
+            }
+
             while (true)
             {
                 try
@@ -120,9 +130,9 @@ namespace ConsoleApplication1
                             var postedLogFormat = "Posted item {0}, Status: {1}, Target Url: {2}";
                             var url = anchor.Attributes["href"].Value;
                             Console.WriteLine(postingLogFormat, url);
-                            var result = new AliExpressPoster(restAPIKey, restAPISecret).Generate(url);
+                            var result = new AliExpressPoster(restAPIKey, restAPISecret, postType, markUpPercentage, usdtoMyrCurrencyRate).Generate(url);
                             Console.WriteLine(postedLogFormat, result.SourceUrl, result.Success ? "Success" : "Failed",
-                                result?.PostedUrl);
+                                result?.PostedUrl, result?.Reason);
 
                             if (result.Success)
                             {
@@ -139,7 +149,7 @@ namespace ConsoleApplication1
 
                         if (totalPosted > maxItemPerCategory)
                         {
-                            Console.WriteLine("Reached limit of " + totalPosted + " for category " +  randomAnchor);
+                            Console.WriteLine("Reached limit of " + totalPosted + " for category " + randomAnchor);
                             break;
                         }
 

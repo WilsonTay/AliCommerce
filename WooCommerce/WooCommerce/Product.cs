@@ -49,6 +49,8 @@ namespace WooCommerceNET.WooCommerce
         public bool shipping_required { get; set; }
 
         public string shipping_class { get; set; }
+
+        public string status { get; set; }
     }
 
     public class ProductReview
