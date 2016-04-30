@@ -41,3 +41,4 @@ C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.csproj.GenerateResource.Cache
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.dll
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.pdb
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.csprojResolveAssemblyReference.cache

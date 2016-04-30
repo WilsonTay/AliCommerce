@@ -33,23 +33,35 @@ namespace WooCommerce.Automation
         private double priceMarkupPercentage = 0.0;
         private double usdToMyrCurrencyRate = 0.0;
 
+        private double productMinPriceAfterConvert;
+        private double productBelowMinMarkup;
+
         public AliExpressPoster(
             string restAPIKey,
             string restAPISecret,
             PostType postType,
             double priceMarkupPercentage,
-            double usdToMyrCurrencyRate)
+            double usdToMyrCurrencyRate,
+            double productMinPriceAfterConvert,
+            double productBelowMinMarkup)
         {
             this.restAPIKey = restAPIKey;
             this.restAPISecret = restAPISecret;
             this.postType = postType;
             this.priceMarkupPercentage = priceMarkupPercentage;
             this.usdToMyrCurrencyRate = usdToMyrCurrencyRate;
+            this.productMinPriceAfterConvert = productMinPriceAfterConvert;
+            this.productBelowMinMarkup = productBelowMinMarkup;
         }
 
         private double getMarkedUpAndConvertedPrice(double price)
         {
             price = this.priceMarkupPercentage * price * this.usdToMyrCurrencyRate;
+
+            if (price < this.productMinPriceAfterConvert)
+            {
+                price += this.productBelowMinMarkup;
+            }
 
             return price;
         }

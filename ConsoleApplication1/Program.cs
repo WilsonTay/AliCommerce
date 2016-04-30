@@ -72,6 +72,11 @@ namespace ConsoleApplication1
             var usdtoMyrCurrencyRate = Double.Parse(ConfigurationManager.AppSettings["usdtoMyrCurrencyRate"]);
             var postTypeStr = ConfigurationManager.AppSettings["postAs"];
 
+            var productPauseDelay = int.Parse(ConfigurationManager.AppSettings["productPauseDelay"]);
+
+            var productMinPriceAfterConvert = Double.Parse(ConfigurationManager.AppSettings["productMinPriceAfterConvert"]);
+            var productBelowMinMarkup = Double.Parse(ConfigurationManager.AppSettings["productBelowMinMarkup"]);
+
             PostType postType = PostType.Draft;
             if (postTypeStr.ToLower().Equals("publish"))
             {
@@ -82,24 +87,6 @@ namespace ConsoleApplication1
             {
                 try
                 {
-                    //HtmlDocument doc =
-                    //    new HtmlWeb { UserAgent = chromeUserAgent }.Load(categoryUrl);
-
-                    //var anchors =
-                    //    doc.DocumentNode.Descendants()
-                    //        .Where(
-                    //            a =>
-                    //                a.Name.Equals("a") && a.Attributes["href"] != null &&
-                    //                a.Attributes["href"].Value.Contains("/category/") &&
-                    //                included.Contains(a.InnerText))
-                    //        .ToList();
-
-                    //Console.WriteLine("Retrieved " + anchors.Count + " categories");
-                    //var randomAnchor = anchors.ElementAt(new Random().Next(0, anchors.Count())).Attributes["href"].Value;
-
-                    //var randomAnchor =
-                    //    "http://www.aliexpress.com/category/100006750/jewelry-sets.html?spm=2114.110101018.106.7.DQrxeC&g=y&similar_style=yes&isrefine=y";
-
                     Console.WriteLine("Posting category: " + categoryUrl);
                     var currentCategoryUrl = categoryUrl;
                     var totalPosted = 0;
@@ -143,7 +130,15 @@ namespace ConsoleApplication1
                             var postedLogFormat = "Posted item {0}, Status: {1}, Target Url: {2}, Reason: {3}";
                             var url = anchor.Attributes["href"].Value;
                             Console.WriteLine(postingLogFormat, url);
-                            var result = new AliExpressPoster(restAPIKey, restAPISecret, postType, markUpPercentage, usdtoMyrCurrencyRate).Generate(url);
+                            var result = new AliExpressPoster
+                                                (restAPIKey, 
+                                                restAPISecret, 
+                                                postType, 
+                                                markUpPercentage, 
+                                                usdtoMyrCurrencyRate,
+                                                productMinPriceAfterConvert,
+                                                productBelowMinMarkup)
+                                .Generate(url);
                             Console.WriteLine(postedLogFormat, result.SourceUrl, result.Success ? "Success" : "Failed",
                                 result?.PostedUrl, result?.Reason);
 
@@ -157,7 +152,7 @@ namespace ConsoleApplication1
                                 break;
                             }
 
-                            Thread.Sleep(15000);
+                            Thread.Sleep(productPauseDelay);
                         }
 
                         if (totalPosted > maxItemPerCategory)
