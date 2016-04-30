@@ -36,6 +36,8 @@ namespace WooCommerce.Automation
         private double productMinPriceAfterConvert;
         private double productBelowMinMarkup;
 
+        private readonly WCObject wc;
+
         public AliExpressPoster(
             string restAPIKey,
             string restAPISecret,
@@ -52,6 +54,12 @@ namespace WooCommerce.Automation
             this.usdToMyrCurrencyRate = usdToMyrCurrencyRate;
             this.productMinPriceAfterConvert = productMinPriceAfterConvert;
             this.productBelowMinMarkup = productBelowMinMarkup;
+
+            RestAPI rest = new RestAPI("http://dealswhat.com/wc-api/v3/",
+               this.restAPIKey,
+               this.restAPISecret);
+            wc = new WCObject(rest);
+
         }
 
         private double getMarkedUpAndConvertedPrice(double price)
@@ -98,10 +106,7 @@ namespace WooCommerce.Automation
         {
             try
             {
-                RestAPI rest = new RestAPI("http://dealswhat.com/wc-api/v3/",
-                 this.restAPIKey,
-                 this.restAPISecret);
-                WCObject wc = new WCObject(rest);
+
 
                 HtmlNode.ElementsFlags.Remove("form");
 
@@ -236,11 +241,15 @@ namespace WooCommerce.Automation
 
                 product.sku = productIdElement.Attributes["value"].Value;
 
-                var existingProducts = wc.GetProducts(new Dictionary<string, string>
-                {
-                    {"filter[sku]", product.sku}
-                }).Result;
-                if (existingProducts.Any())
+                //var existingProducts = wc.GetProducts(new Dictionary<string, string>
+                //{
+                //    {"filter[post_status]","publish,draft" },
+                //    {"filter[sku]", product.sku}
+
+                //}).Result;
+
+                if (ProductExists(product.sku))
+                //if (existingProducts.Any())
                 {
                     return new AliExpressPostResult
                     {
@@ -439,6 +448,16 @@ namespace WooCommerce.Automation
                     }
                 }
 
+                var shippingElement = doc.DocumentNode.Descendants()
+                    .FirstOrDefault(
+                        a =>
+                            a.Name.Equals("p") && a.Attributes["class"] != null &&
+                            a.Attributes["class"].Value.Equals("p-delivery-day-tips"));
+
+                if (shippingElement != null)
+                {
+                    product.short_description = shippingElement.InnerText;
+                }
 
                 product.variations = productVariations;
                 product.attributes = new List<ProductAttribute>();
@@ -486,6 +505,17 @@ namespace WooCommerce.Automation
             }
         }
 
+        public bool ProductExists(string sku)
+        {
+            var existingProducts = wc.GetProducts(new Dictionary<string, string>
+                {
+                    {"filter[post_status]","publish,draft" },
+                    {"filter[sku]", sku}
+
+                }).Result;
+
+            return existingProducts.Any();
+        }
 
         private ProductCategory GetCategory(WCObject wc, string categoryName, string parentCategoryName)
         {
