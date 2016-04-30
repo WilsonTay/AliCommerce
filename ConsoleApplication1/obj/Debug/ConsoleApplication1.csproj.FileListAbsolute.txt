@@ -54,3 +54,5 @@ C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\ConsoleApplication1\bin\Debug\Newtonsoft.Json.xml
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\ConsoleApplication1\bin\Debug\RestSharp.Portable.Core.xml
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\ConsoleApplication1\bin\Debug\RestSharp.Portable.HttpClient.xml
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\ConsoleApplication1\bin\Debug\WebDriver.dll
+C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\ConsoleApplication1\bin\Debug\WebDriver.xml

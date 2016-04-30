@@ -51,8 +51,18 @@ namespace WooCommerceNET.WooCommerce
         public string shipping_class { get; set; }
 
         public string status { get; set; }
+
+        public string weight { get; set; }
+
+        public ProductDimension dimensions { get; set; }
     }
 
+    public class ProductDimension
+    {
+        public string length { get; set; }
+        public string width { get; set; }
+        public string height { get; set; }
+    }
     public class ProductReview
     {
         public int id { get; set; }

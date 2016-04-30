@@ -12,6 +12,9 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Configuration;
 using HtmlAgilityPack;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Firefox;
 using WooCommerce.Automation;
 using WooCommerce.WooCommerce;
 using WooCommerceNET;
@@ -75,34 +78,36 @@ namespace ConsoleApplication1
                 postType = PostType.Publish;
             }
 
-            while (true)
+            foreach (var categoryUrl in included)
             {
                 try
                 {
-                    Console.WriteLine("Start scanning for categories..");
-                    var categoryUrl =
-                        "http://www.aliexpress.com/all-wholesale-products.html?spm=2114.11010108.22.1.B0Jzm8";
-                    HtmlDocument doc =
-                        new HtmlWeb { UserAgent = chromeUserAgent }.Load(categoryUrl);
+                    //HtmlDocument doc =
+                    //    new HtmlWeb { UserAgent = chromeUserAgent }.Load(categoryUrl);
 
-                    var anchors =
-                        doc.DocumentNode.Descendants()
-                            .Where(
-                                a =>
-                                    a.Name.Equals("a") && a.Attributes["href"] != null &&
-                                    a.Attributes["href"].Value.Contains("/category/") &&
-                                    included.Contains(a.InnerText))
-                            .ToList();
+                    //var anchors =
+                    //    doc.DocumentNode.Descendants()
+                    //        .Where(
+                    //            a =>
+                    //                a.Name.Equals("a") && a.Attributes["href"] != null &&
+                    //                a.Attributes["href"].Value.Contains("/category/") &&
+                    //                included.Contains(a.InnerText))
+                    //        .ToList();
 
-                    Console.WriteLine("Retrieved " + anchors.Count + " categories");
-                    var randomAnchor = anchors.ElementAt(new Random().Next(0, anchors.Count())).Attributes["href"].Value;
+                    //Console.WriteLine("Retrieved " + anchors.Count + " categories");
+                    //var randomAnchor = anchors.ElementAt(new Random().Next(0, anchors.Count())).Attributes["href"].Value;
 
+                    //var randomAnchor =
+                    //    "http://www.aliexpress.com/category/100006750/jewelry-sets.html?spm=2114.110101018.106.7.DQrxeC&g=y&similar_style=yes&isrefine=y";
+
+                    Console.WriteLine("Posting category: " + categoryUrl);
+                    var currentCategoryUrl = categoryUrl;
                     var totalPosted = 0;
                     for (int page = 1; page < 10; page++)
                     {
-                        randomAnchor = randomAnchor.Replace(".html", "/" + page + ".html");
+                        currentCategoryUrl = currentCategoryUrl.Replace(".html", "/" + page + ".html");
 
-                        var urlBuilder = new UriBuilder(randomAnchor);
+                        var urlBuilder = new UriBuilder(currentCategoryUrl);
                         var nvc = new NameValueCollection();
                         nvc.Add("shipCountry", "MY");
                         nvc.Add("minPrice", priceLowCap);
@@ -113,7 +118,15 @@ namespace ConsoleApplication1
 
                         Console.WriteLine("Start processing category " + urlBuilder);
 
-                        doc = new HtmlWeb { UserAgent = chromeUserAgent }.Load(urlBuilder.ToString());
+                        HtmlNode.ElementsFlags.Remove("form");
+                        IWebDriver browser = Browser.Instance;
+
+                        browser.Navigate().GoToUrl(urlBuilder.ToString());
+                        var sourceCode = browser.PageSource;
+                        //browser.Close();
+                        var doc = new HtmlDocument();
+                        doc.LoadHtml(sourceCode);
+                        //doc = new HtmlWeb { UserAgent = chromeUserAgent }.Load(urlBuilder.ToString());
                         var productAnchors = doc.DocumentNode.Descendants()
                             .Where(
                                 a =>
@@ -127,7 +140,7 @@ namespace ConsoleApplication1
                         foreach (var anchor in productAnchors)
                         {
                             var postingLogFormat = "Posting item {0}";
-                            var postedLogFormat = "Posted item {0}, Status: {1}, Target Url: {2}";
+                            var postedLogFormat = "Posted item {0}, Status: {1}, Target Url: {2}, Reason: {3}";
                             var url = anchor.Attributes["href"].Value;
                             Console.WriteLine(postingLogFormat, url);
                             var result = new AliExpressPoster(restAPIKey, restAPISecret, postType, markUpPercentage, usdtoMyrCurrencyRate).Generate(url);
@@ -149,11 +162,11 @@ namespace ConsoleApplication1
 
                         if (totalPosted > maxItemPerCategory)
                         {
-                            Console.WriteLine("Reached limit of " + totalPosted + " for category " + randomAnchor);
+                            Console.WriteLine("Reached limit of " + totalPosted + " for category " + currentCategoryUrl);
                             break;
                         }
 
-                        Console.WriteLine("Done processing category " + randomAnchor);
+                        Console.WriteLine("Done processing category " + currentCategoryUrl);
                     }
                 }
                 catch (Exception ex)

@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Firefox;
 using WooCommerce.Automation.Models;
 using WooCommerce.WooCommerce;
 using WooCommerceNET;
@@ -91,11 +93,32 @@ namespace WooCommerce.Automation
 
                 HtmlNode.ElementsFlags.Remove("form");
 
-                HtmlDocument doc =
-                    new HtmlWeb
-                    {
-                        UserAgent = chromeUserAgent
-                    }.Load(url);
+
+                IWebDriver browser = Browser.Instance;
+                browser.Navigate().GoToUrl(url);
+                var sourceCode = browser.PageSource;
+                while (sourceCode.Contains("Please input captcha"))
+                {
+                    Thread.Sleep(10000);
+                    sourceCode = browser.PageSource;
+                }
+                //browser.Close();
+                var doc = new HtmlDocument();
+                doc.LoadHtml(sourceCode);
+
+                //HtmlDocument doc =
+                //    new HtmlWeb
+                //    {
+                //        UserAgent = chromeUserAgent
+                //    }.Load(url);
+
+                //WebClient webClient = new WebClient();
+                //var proxy = ProxyProvider.GetRandomProxy();
+                //webClient.Proxy = new WebProxy(proxy);
+                //var page = webClient.DownloadString(url);
+
+                //HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
+                //doc.LoadHtml(page);
 
 
                 var categoriesElement =
@@ -127,12 +150,16 @@ namespace WooCommerce.Automation
                             a =>
                                 a.Attributes.Contains("class") &&
                                 a.Attributes["class"].Value.Equals("image-thumb-list"));
-                foreach (
-                    HtmlNode link in
-                        imageThumbnailContainer.Descendants("img"))
+
+                if (imageThumbnailContainer != null)
                 {
-                    var src = link.Attributes["src"].Value;
-                    imageUrls.Add(src);
+                    foreach (
+                        HtmlNode link in
+                            imageThumbnailContainer.Descendants("img"))
+                    {
+                        var src = link.Attributes["src"].Value;
+                        imageUrls.Add(src);
+                    }
                 }
 
                 // If no image urls, means the item only has one image. Take the main image.
@@ -219,38 +246,34 @@ namespace WooCommerce.Automation
 
                 var source = doc.DocumentNode.OuterHtml;
                 handlePrice(source, product);
-                //var highPriceElement = doc.DocumentNode.Descendants()
-                //   .FirstOrDefault(
-                //       a =>
-                //           a.Name.Equals("span") && a.Attributes["itemprop"] != null &&
-                //           a.Attributes["itemprop"].Value.Equals("highPrice"));
 
-                //var priceElement = doc.DocumentNode.Descendants()
-                // .FirstOrDefault(
-                //     a =>
-                //         a.Name.Equals("span") && a.Attributes["itemprop"] != null &&
-                //         a.Attributes["itemprop"].Value.Equals("price"));
+                // packinging details
+                var packagingElements = doc.DocumentNode.Descendants()
+                    .Where(a => a.Name.Equals("span") &&
+                    a.Attributes["class"] != null &&
+                    a.Attributes["class"].Value.Equals("packaging-title"));
 
-                //if (highPriceElement != null)
-                //{
-                //    product.sale_price = Math.Round(double.Parse(highPriceElement.InnerText) * 4 * 1.2, 1);
-                //}
+                var weight = 0.0;
+                var height = 0.0;
+                var width = 0.0;
+                var length = 0.0;
 
-                //else if (priceElement != null)
-                //{
-                //    product.sale_price = Math.Round(double.Parse(priceElement.InnerText) * 4 * 1.2, 1);
-                //}
-                //else
-                //{
-                //    return new AliExpressPostResult
-                //    {
-                //        SourceUrl = url,
-                //        Success = false,
-                //        Reason = "Unable to retrieve price."
-                //    };
-                //}
+                var weightElement = packagingElements.FirstOrDefault(a => a.InnerText.Contains("Package Weight:"));
+                weight = Double.Parse(weightElement.NextSibling.NextSibling.GetAttributeValue("rel", "0.0"));
 
-                //product.regular_price = Math.Round(product.sale_price.Value * 1.8, 1);
+                var dimensionElement = packagingElements.FirstOrDefault(a => a.InnerText.Contains("Package Size:"));
+                var dimensionTemp = dimensionElement.NextSibling.NextSibling.GetAttributeValue("rel", "0|0|0");
+                var dimensions = dimensionTemp.Split('|').Select(Double.Parse).ToList();
+                height = dimensions[0];
+                width = dimensions[1];
+                length = dimensions[2];
+
+                product.weight = weight.ToString();
+
+                product.dimensions = new ProductDimension();
+                product.dimensions.height = height.ToString();
+                product.dimensions.width = width.ToString();
+                product.dimensions.length = length.ToString();
 
                 if (variationDiv != null)
                 {
@@ -425,7 +448,7 @@ namespace WooCommerce.Automation
                 product.shipping_required = true;
                 product.shipping_class = "free-international-shipping";
 
-                 product.status = postType.ToString().ToLower();
+                product.status = postType.ToString().ToLower();
 
                 var resultStr = wc.PostProduct(product).Result;
                 var result = JsonConvert.DeserializeObject<WooCommerceResult>(resultStr);
@@ -446,6 +469,8 @@ namespace WooCommerce.Automation
                     Success = false,
                     Reason = ex.Message
                 };
+
+
             }
         }
 

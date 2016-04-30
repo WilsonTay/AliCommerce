@@ -36,7 +36,6 @@ C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\Newtonsoft.Json.xml
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\RestSharp.Portable.Core.xml
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\bin\Debug\RestSharp.Portable.HttpClient.xml
-C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.csprojResolveAssemblyReference.cache
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.Form1.resources
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.Properties.Resources.resources
 C:\Users\Admin\Documents\Visual Studio 2015\Projects\WooCommerce Git\AliCommerce\WooCommerce\obj\Debug\WooCommerce.csproj.GenerateResource.Cache
