@@ -51,7 +51,12 @@ namespace WooCommerce.Bot.UI
                 var productMinPriceAfterConvert = Double.Parse(ConfigurationManager.AppSettings["productMinPriceAfterConvert"]);
                 var productBelowMinMarkup = Double.Parse(ConfigurationManager.AppSettings["productBelowMinMarkup"]);
 
+                var loginPageAppearedPauseDelay = int.Parse(ConfigurationManager.AppSettings["loginPageAppearedPauseDelay"]);
+
+                var restAPIUrl = ConfigurationManager.AppSettings["wooCommerceRestAPIUrl"];
+
                 bot = new BotRunner(
+                             restAPIUrl,
                              postTypeStr,
                              included,
                              priceLowCap,
@@ -65,7 +70,8 @@ namespace WooCommerce.Bot.UI
                              maxItemPerCategory,
                              productPauseDelay,
                              new FormLogger(this, this.txtLog),
-                             new FormResultHandler(this, this.listView1));
+                             new FormResultHandler(this, this.listView1),
+                             loginPageAppearedPauseDelay);
 
                 thread = new Thread(() =>
                 {
@@ -79,11 +85,13 @@ namespace WooCommerce.Bot.UI
             {
                 if (!paused)
                 {
+                    button1.Text = "Unpause";
                     bot.Pause();
                     paused = true;
                 }
                 else
                 {
+                    button1.Text = "Pause";
                     bot.Resume();
                     paused = false;
                 }
@@ -128,6 +136,15 @@ namespace WooCommerce.Bot.UI
                     Process.Start(url);
                 }
             }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            var random = new Random().Next(0, 999999);
+            var fileName = random + ".csv";
+            ListViewToCSV.Save(listView1, fileName, true);
+
+            Process.Start(fileName);
         }
     }
 }

@@ -32,12 +32,17 @@ namespace WooCommerce.Automation
         private readonly int maxItemPerCategory;
         private readonly int productPauseDelay;
 
+        private readonly int loginPageAppearedPauseDelay;
+
         private readonly ILogger logger;
         private readonly IResultHandler resultHandler;
 
         private bool paused = false;
 
+        private readonly string restApiUrl;
+
         public BotRunner(
+            string restApiUrl,
             string postTypeStr,
             IEnumerable<string> included,
             string priceLowCap,
@@ -51,7 +56,8 @@ namespace WooCommerce.Automation
             int maxItemPerCategory,
             int productPauseDelay,
             ILogger logger,
-            IResultHandler resultHandler)
+            IResultHandler resultHandler,
+            int loginPageAppearedPauseDelay)
         {
             this.postTypeStr = postTypeStr;
             this.included = included;
@@ -67,6 +73,8 @@ namespace WooCommerce.Automation
             this.productPauseDelay = productPauseDelay;
             this.logger = logger;
             this.resultHandler = resultHandler;
+            this.loginPageAppearedPauseDelay = loginPageAppearedPauseDelay;
+            this.restApiUrl = restApiUrl;
         }
 
         private static string ToQueryString(NameValueCollection nvc)
@@ -103,9 +111,9 @@ namespace WooCommerce.Automation
                     this.logger.Info("Posting category: " + categoryUrl);
                     var currentCategoryUrl = categoryUrl;
                     var totalPosted = 0;
-                    for (int page = 1; page < 10; page++)
+                    for (int page = 1; page < 100; page++)
                     {
-                        currentCategoryUrl = currentCategoryUrl.Replace(".html", "/" + page + ".html");
+                        //currentCategoryUrl = currentCategoryUrl.Replace(".html", "/" + page + ".html");
 
                         var urlBuilder = new UriBuilder(currentCategoryUrl);
                         var nvc = new NameValueCollection();
@@ -154,10 +162,16 @@ namespace WooCommerce.Automation
 
                             var url = anchor.Attributes["href"].Value;
 
+                            if (url.Contains("?"))
+                            {
+                                url = url.Substring(0, url.IndexOf("?"));
+                            }
+
                             var sku = new Uri(url).Segments.Last().Replace(".html", "");
 
-                            var poster = new AliExpressPoster
-                                (restAPIKey,
+                            var poster = new AliExpressPoster(
+                                    restApiUrl, 
+                                    restAPIKey,
                                     restAPISecret,
                                     postType,
                                     markUpPercentage,
@@ -179,7 +193,7 @@ namespace WooCommerce.Automation
                             }
                             else
                             {
-                                result = poster.Generate(url);
+                                // result = poster.Post(url);
                             }
 
                             this.resultHandler.Handle(result);
@@ -192,6 +206,12 @@ namespace WooCommerce.Automation
                             if (totalPosted > maxItemPerCategory)
                             {
                                 break;
+                            }
+
+                            if (!result.Success && result.Reason.Equals("Login page"))
+                            {
+                                this.logger.Warn("Hit into login page. Pausing for " + productPauseDelay);
+                                Thread.Sleep(loginPageAppearedPauseDelay);
                             }
 
                             // Product exist dont pause.
@@ -209,12 +229,21 @@ namespace WooCommerce.Automation
                             break;
                         }
 
+                        var nextPage = page + 1;
+                        var pageElement = doc.DocumentNode.Descendants()
+                            .FirstOrDefault(a => a.Name.Equals("div") && a.Attributes["class"] != null
+                                                 && a.Attributes["class"].Value.Equals("ui-pagination-navi util-left"));
+                        var allPageElement = pageElement.Descendants().Where(a => a.Name.Equals("a"));
+                        var nextPageElement = allPageElement.FirstOrDefault(a => a.InnerText.Equals(nextPage.ToString()));
+
+                        currentCategoryUrl = nextPageElement.Attributes["href"].Value;
+
                         this.logger.Info("Done processing category " + currentCategoryUrl);
                     }
                 }
                 catch (Exception ex)
                 {
-                    this.logger.Warn("Woops. Pausing 30 minutes.. because of " + ex.Message + " " + ex.StackTrace);
+                    this.logger.Error("Woops. Pausing 30 minutes..", ex);
                     Thread.Sleep(TimeSpan.FromMinutes(30));
                 }
             }

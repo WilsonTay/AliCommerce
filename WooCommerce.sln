@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WooCommerce.UI", "WooCommer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WooCommerce.Bot.UI", "WooCommerce.Bot.UI\WooCommerce.Bot.UI.csproj", "{C44CA07C-C198-48DB-8CF2-55FB146DFB72}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WordPressSharp", "WordPressSharp\WordPressSharp.csproj", "{7A938355-0B6B-48B7-97FB-C0C09015307B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WooCommerce.Bot.Update", "WooCommerce.Bot.Update\WooCommerce.Bot.Update.csproj", "{D04A34CE-443A-45DB-9D7E-A4BD18D0332E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +43,14 @@ Global
 		{C44CA07C-C198-48DB-8CF2-55FB146DFB72}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C44CA07C-C198-48DB-8CF2-55FB146DFB72}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C44CA07C-C198-48DB-8CF2-55FB146DFB72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A938355-0B6B-48B7-97FB-C0C09015307B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A938355-0B6B-48B7-97FB-C0C09015307B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A938355-0B6B-48B7-97FB-C0C09015307B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A938355-0B6B-48B7-97FB-C0C09015307B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D04A34CE-443A-45DB-9D7E-A4BD18D0332E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D04A34CE-443A-45DB-9D7E-A4BD18D0332E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D04A34CE-443A-45DB-9D7E-A4BD18D0332E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D04A34CE-443A-45DB-9D7E-A4BD18D0332E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

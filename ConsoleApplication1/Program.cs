@@ -58,7 +58,8 @@ namespace ConsoleApplication1
                 maxItemPerCategory, 
                 productPauseDelay,
                 new ConsoleLogger(),
-                new ConsoleResultHandler());
+                new ConsoleResultHandler(),
+                15 * 60 * 1000);
             bot.Run();
         }
     }

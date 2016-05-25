@@ -34,6 +34,15 @@ namespace WooCommerce.UI
             var priceHighCap = ConfigurationManager.AppSettings["priceHighCap"];
             var maxItemPerCategory = int.Parse(ConfigurationManager.AppSettings["maxItemPerCategory"]);
 
+            var markUpPercentage = Double.Parse(ConfigurationManager.AppSettings["markUpPercentage"]);
+            var usdtoMyrCurrencyRate = Double.Parse(ConfigurationManager.AppSettings["usdtoMyrCurrencyRate"]);
+            var postTypeStr = ConfigurationManager.AppSettings["postAs"];
+
+            var productPauseDelay = int.Parse(ConfigurationManager.AppSettings["productPauseDelay"]);
+
+            var productMinPriceAfterConvert = Double.Parse(ConfigurationManager.AppSettings["productMinPriceAfterConvert"]);
+            var productBelowMinMarkup = Double.Parse(ConfigurationManager.AppSettings["productBelowMinMarkup"]);
+
             if (!started)
             {
                 var urls = richTextBox1.Lines.ToList();
@@ -49,8 +58,16 @@ namespace WooCommerce.UI
                             break;
                         try
                         {
-                            var poster = new AliExpressPoster(restAPIKey, restAPISecret);
-                            var result = poster.Generate(text);
+                            PostType postType = PostType.Draft;
+                            if (postTypeStr.ToLower().Equals("publish"))
+                            {
+                                postType = PostType.Publish;
+                            }
+
+                            var poster = new AliExpressPoster(restAPIKey, restAPISecret, postType, markUpPercentage,
+                                usdtoMyrCurrencyRate, productMinPriceAfterConvert, productBelowMinMarkup);
+
+                            var result = poster.Post(text);
 
                             RunOnUIThread(() =>
                             {

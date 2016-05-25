@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 using WooCommerce.Automation;
 
@@ -18,7 +19,7 @@ namespace WooCommerce.Bot.UI
         {
             RunOnUIThread(() =>
             {
-                this.richTextBox.AppendText(message + "\r\n");
+                AppendText(this.richTextBox, message + "\r\n", Color.DarkBlue);
             });
         }
 
@@ -26,7 +27,7 @@ namespace WooCommerce.Bot.UI
         {
             RunOnUIThread(() =>
             {
-                this.richTextBox.AppendText(message + "\r\n");
+                AppendText(this.richTextBox, message + "\r\n", Color.DarkGoldenrod);
             });
         }
 
@@ -34,7 +35,7 @@ namespace WooCommerce.Bot.UI
         {
             RunOnUIThread(() =>
             {
-                this.richTextBox.AppendText(message + "\r\n");
+                AppendText(this.richTextBox, message + " " + ex.ToString() + "\r\n", Color.DarkRed);
             });
         }
 
@@ -44,6 +45,16 @@ namespace WooCommerce.Bot.UI
             {
                 action();
             });
+        }
+
+        public static void AppendText(RichTextBox box, string text, Color color)
+        {
+            box.SelectionStart = box.TextLength;
+            box.SelectionLength = 0;
+
+            box.SelectionColor = color;
+            box.AppendText(text);
+            box.SelectionColor = box.ForeColor;
         }
     }
 }

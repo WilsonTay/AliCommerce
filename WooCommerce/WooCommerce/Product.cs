@@ -41,6 +41,8 @@ namespace WooCommerceNET.WooCommerce
 
         public bool enable_html_description { get; set; }
 
+        public bool enable_html_short_description { get; set; }
+
         public List<ProductVariations> variations { get; set; } 
 
         public List<ProductAttribute> attributes { get; set; } 
@@ -71,7 +73,7 @@ namespace WooCommerceNET.WooCommerce
 
         public string review { get; set; }
 
-        public int rating { get; set; }
+        public int? rating { get; set; }
 
         public string reviewer_name { get; set; }
 

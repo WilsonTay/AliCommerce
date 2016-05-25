@@ -39,6 +39,7 @@ namespace WooCommerce.Automation
         private readonly WCObject wc;
 
         public AliExpressPoster(
+            string restAPIUrl,
             string restAPIKey,
             string restAPISecret,
             PostType postType,
@@ -55,61 +56,21 @@ namespace WooCommerce.Automation
             this.productMinPriceAfterConvert = productMinPriceAfterConvert;
             this.productBelowMinMarkup = productBelowMinMarkup;
 
-            RestAPI rest = new RestAPI("http://dealswhat.com/wc-api/v3/",
+            RestAPI rest = new RestAPI(
+               restAPIUrl,
                this.restAPIKey,
                this.restAPISecret);
             wc = new WCObject(rest);
 
         }
 
-        private double getMarkedUpAndConvertedPrice(double price)
-        {
-            price = this.priceMarkupPercentage * price * this.usdToMyrCurrencyRate;
 
-            if (price < this.productMinPriceAfterConvert)
-            {
-                price += this.productBelowMinMarkup;
-            }
 
-            return price;
-        }
-
-        private void handlePrice(string source, Product product)
-        {
-            var maxPrice = getQuotes(source, "window.runParams.maxPrice");
-
-            if (source.Contains("window.runParams.actMaxPrice"))
-            {
-                var maxDiscountedPrice = getQuotes(source, "window.runParams.actMaxPrice");
-                product.sale_price = getMarkedUpAndConvertedPrice(Double.Parse(maxDiscountedPrice));
-                product.regular_price = getMarkedUpAndConvertedPrice(Double.Parse(maxPrice));
-            }
-            else
-            {
-                product.price = getMarkedUpAndConvertedPrice(Double.Parse(maxPrice));
-            }
-
-        }
-
-        private string getQuotes(string source, string stringToFind)
-        {
-            var index = source.IndexOf(stringToFind);
-            var startIndex = source.IndexOf("\"", index);
-            var endIndex = source.IndexOf("\"", startIndex + 1);
-
-            var inBetween = source.Substring(startIndex, endIndex - startIndex).Trim('"');
-
-            return inBetween;
-        }
-
-        public AliExpressPostResult Generate(string url)
+        public AliExpressPostResult Post(string url)
         {
             try
             {
-
-
                 HtmlNode.ElementsFlags.Remove("form");
-
 
                 IWebDriver browser = Browser.Instance;
                 browser.Navigate().GoToUrl(url);
@@ -119,6 +80,17 @@ namespace WooCommerce.Automation
                     Thread.Sleep(10000);
                     sourceCode = browser.PageSource;
                 }
+
+                if (sourceCode.Contains("The Best Value Online"))
+                {
+                    return new AliExpressPostResult
+                    {
+                        SourceUrl = url,
+                        Success = false,
+                        Reason = "Login page"
+                    };
+                }
+
                 //browser.Close();
                 var doc = new HtmlDocument();
                 doc.LoadHtml(sourceCode);
@@ -138,102 +110,15 @@ namespace WooCommerce.Automation
                 //doc.LoadHtml(page);
 
 
-                var categoriesElement =
-                    doc.DocumentNode.Descendants()
-                        .FirstOrDefault(
-                            a => a.Attributes.Contains("class") && a.Attributes["class"].Value.Equals("ui-breadcrumb"));
-
-                var categories = categoriesElement.Descendants().Where(
-                    a => a.Name.Equals("a")
-                    && !a.InnerText.Equals("All Categories")
-                    && !a.InnerText.Equals("Home")).Select(a => WebUtility.HtmlDecode(a.InnerText));
-
-                var categoryName = "";
-                var parentCategoryName = "";
-
-                foreach (var category in categories)
-                {
-                    var model = GetCategory(wc, category, parentCategoryName);
-                    parentCategoryName = category;
-
-                    categoryName = model.id.ToString();
-                }
-
-                var imageUrls = new List<string>();
-
-                var imageThumbnailContainer =
-                    doc.DocumentNode.Descendants("ul")
-                        .FirstOrDefault(
-                            a =>
-                                a.Attributes.Contains("class") &&
-                                a.Attributes["class"].Value.Equals("image-thumb-list"));
-
-                if (imageThumbnailContainer != null)
-                {
-                    foreach (
-                        HtmlNode link in
-                            imageThumbnailContainer.Descendants("img"))
-                    {
-                        var src = link.Attributes["src"].Value;
-                        imageUrls.Add(src);
-                    }
-                }
-
-                // If no image urls, means the item only has one image. Take the main image.
-                if (!imageUrls.Any())
-                {
-                    var node =
-                        doc.DocumentNode.Descendants().FirstOrDefault(a => a.Name.Equals("div") && a.Id.Equals("magnifier"));
-
-                    var img = node.Descendants().FirstOrDefault(a => a.Name.Equals("img") && a.Attributes["src"] != null);
-
-                    imageUrls.Add(img.Attributes["src"].Value);
-                }
-
-
-                var objectId = doc.DocumentNode.Descendants("input")
-                    .FirstOrDefault(
-                        a => a.Attributes["name"] != null && a.Attributes["name"].Value.Equals("objectId"))
-                    .Attributes["value"]
-                    .Value;
-
-                var description =
-                    new WebClient().DownloadString("http://desc.aliexpress.com/getDescModuleAjax.htm?productId=" +
-                                                   objectId);
-
-                var title =
-                    doc.DocumentNode.Descendants("h1")
-                        .FirstOrDefault(
-                            a => a.Attributes["class"] != null && a.Attributes["class"].Value.Equals("product-name"))
-                        .InnerText;
-
-
-
                 var product = new Product();
-                product.title = title;
-                product.categories = new List<string>();
-                product.categories.Add(categoryName);
-
-                var index1 = description.IndexOf('\'') + 1;
-                var index2 = description.LastIndexOf('\'');
-                product.description = description.Substring(index1, index2 - index1);
-
                 product.in_stock = true;
                 product.enable_html_description = true;
+                product.enable_html_short_description = true;
 
-                var imageId = 0;
-                product.images = imageUrls.Select(a =>
-                {
-                    var image = new ProductImage();
-                    //image.id = imageId;
-                    image.src = a.Replace("50x50", "640x640");
-                    image.title = "Image " + imageId;
-                    image.position = (short)imageId;
+                HandleCategory(doc, product);
 
-                    imageId++;
-                    return image;
-                })
-                    .ToList();
+                var imageId = HandleImages(doc, product);
+                HandleTitleAndDescription(doc, product);
 
                 var productIdElement = doc.DocumentNode.Descendants()
                     .FirstOrDefault(a => a.Name.Equals("input") && a.Attributes["name"] != null
@@ -241,15 +126,7 @@ namespace WooCommerce.Automation
 
                 product.sku = productIdElement.Attributes["value"].Value;
 
-                //var existingProducts = wc.GetProducts(new Dictionary<string, string>
-                //{
-                //    {"filter[post_status]","publish,draft" },
-                //    {"filter[sku]", product.sku}
-
-                //}).Result;
-
                 if (ProductExists(product.sku))
-                //if (existingProducts.Any())
                 {
                     return new AliExpressPostResult
                     {
@@ -259,225 +136,14 @@ namespace WooCommerce.Automation
                     };
                 }
 
-                var variationDiv =
-                    doc.DocumentNode.Descendants()
-                        .FirstOrDefault(a => a.GetAttributeValue("id", string.Empty).Equals("j-product-info-sku"));
 
-                var attributeOptionsGroupList = new List<AttributeOptionsGroup>();
+                HandlePrice(doc, product);
 
-                var source = doc.DocumentNode.OuterHtml;
-                handlePrice(source, product);
+                HandleWeightAndDimension(doc, product);
 
-                // packinging details
-                var packagingElements = doc.DocumentNode.Descendants()
-                    .Where(a => a.Name.Equals("span") &&
-                    a.Attributes["class"] != null &&
-                    a.Attributes["class"].Value.Equals("packaging-title"));
+                HandleVariationAndAttributes(doc, product, imageId);
 
-                var weight = 0.0;
-                var height = 0.0;
-                var width = 0.0;
-                var length = 0.0;
-
-                var weightElement = packagingElements.FirstOrDefault(a => a.InnerText.Contains("Package Weight:"));
-                weight = Double.Parse(weightElement.NextSibling.NextSibling.GetAttributeValue("rel", "0.0"));
-
-                var dimensionElement = packagingElements.FirstOrDefault(a => a.InnerText.Contains("Package Size:"));
-                var dimensionTemp = dimensionElement.NextSibling.NextSibling.GetAttributeValue("rel", "0|0|0");
-                var dimensions = dimensionTemp.Split('|').Select(Double.Parse).ToList();
-                height = dimensions[0];
-                width = dimensions[1];
-                length = dimensions[2];
-
-                product.weight = weight.ToString();
-
-                product.dimensions = new ProductDimension();
-                product.dimensions.height = height.ToString();
-                product.dimensions.width = width.ToString();
-                product.dimensions.length = length.ToString();
-
-                if (variationDiv != null)
-                {
-
-                    var dls = variationDiv.Descendants().Where(a => a.Name.Equals("dl"));
-
-                    if (dls.Any())
-                    {
-                        product.type = "variable";
-                    }
-                    else
-                    {
-                        product.type = "simple";
-                    }
-
-                    foreach (var dl in dls)
-                    {
-                        var attributeName = dl.Descendants().First(a => a.Name.Equals("dt")).InnerText;
-                        var ul = dl.Descendants().First(a => a.Name.Equals("ul"));
-
-                        var attributeOptionsGroup = new AttributeOptionsGroup();
-                        attributeOptionsGroup.AttributeName = attributeName;
-
-
-                        foreach (var li in ul.Descendants().Where(a => a.Name.Equals("li")))
-                        {
-                            var anchor = li.Descendants().First(a => a.Name.Equals("a"));
-                            var anchorTitle = anchor.GetAttributeValue("title", "");
-                            var attributeValue = "";
-                            var attributeImage = "";
-                            if (!string.IsNullOrWhiteSpace(anchorTitle))
-                            {
-                                attributeValue = anchorTitle;
-                                var img = anchor.Descendants().FirstOrDefault(a => a.Name.Equals("img"));
-
-                                if (img != null)
-                                {
-                                    attributeImage = img.GetAttributeValue("bigpic", "");
-                                }
-                                else
-                                {
-                                }
-                            }
-                            else
-                            {
-                                var span = anchor.Descendants().First(a => a.Name.Equals("span"));
-                                attributeValue = span.InnerText;
-                            }
-
-                            var attributeOptions = new SingleAttributeOptions();
-                            attributeOptions.ImageUrl = attributeImage;
-                            attributeOptions.AttributeValue = attributeValue;
-                            attributeOptions.Id = imageId;
-                            imageId++;
-                            attributeOptionsGroup.Options.Add(attributeOptions);
-                        }
-
-                        attributeOptionsGroupList.Add(attributeOptionsGroup);
-                    }
-                }
-
-                var productVariations = new List<ProductVariations>();
-
-                for (int i = 0; i < 1; i++)
-                {
-                    if (attributeOptionsGroupList.Count == 1)
-                    {
-                        var firstGroup = attributeOptionsGroupList.ElementAt(0);
-                        foreach (var firstLevel in firstGroup.Options)
-                        {
-                            var variation = new ProductVariations();
-                            variation.id = i;
-                            variation.regular_price = product.regular_price;
-                            variation.sale_price = product.sale_price;
-                            variation.price = product.price;
-
-                            if (!string.IsNullOrWhiteSpace(firstLevel.ImageUrl))
-                            {
-                                variation.image.Add(new ProductImage
-                                {
-                                    //position = (short)firstLevel.Id,
-                                    src = firstLevel.ImageUrl,
-                                    title = firstLevel.AttributeValue,
-                                    //id = firstLevel.Id
-                                });
-                            }
-
-                            variation.attributes.Add(new ProductSpecificAttribute
-                            {
-                                name = firstGroup.AttributeName,
-                                option = firstLevel.AttributeValue,
-                                slug = firstGroup.AttributeName
-                            });
-
-                            productVariations.Add(variation);
-                        }
-                    }
-                    else if (attributeOptionsGroupList.Count == 2)
-                    {
-                        var firstGroup = attributeOptionsGroupList.ElementAt(0);
-                        var secondGroup = attributeOptionsGroupList.ElementAt(1);
-
-                        foreach (var firstLevel in firstGroup.Options)
-                        {
-                            foreach (var secondLevel in secondGroup.Options)
-                            {
-                                var variation = new ProductVariations();
-                                variation.regular_price = product.regular_price;
-                                variation.sale_price = product.sale_price;
-                                variation.price = product.price;
-                                variation.id = i;
-
-                                if (!string.IsNullOrWhiteSpace(firstLevel.ImageUrl))
-                                {
-                                    variation.image.Add(new ProductImage
-                                    {
-                                        //position = (short)firstLevel.Id,
-                                        src = firstLevel.ImageUrl,
-                                        title = firstLevel.AttributeValue,
-                                        //id = firstLevel.Id
-                                    });
-                                }
-
-                                if (!string.IsNullOrWhiteSpace(secondLevel.ImageUrl))
-                                {
-                                    variation.image.Add(new ProductImage
-                                    {
-                                        //position = (short)firstLevel.Id,
-                                        src = secondLevel.ImageUrl,
-                                        title = secondLevel.AttributeValue,
-                                        //id = firstLevel.Id
-                                    });
-                                }
-
-                                variation.attributes.Add(new ProductSpecificAttribute
-                                {
-                                    name = firstGroup.AttributeName,
-                                    option = firstLevel.AttributeValue,
-                                    slug = firstGroup.AttributeName
-                                });
-                                variation.attributes.Add(new ProductSpecificAttribute
-                                {
-                                    name = secondGroup.AttributeName,
-                                    option = secondLevel.AttributeValue,
-                                    slug = secondGroup.AttributeName
-                                });
-
-                                productVariations.Add(variation);
-                            }
-                        }
-                    }
-                }
-
-                var shippingElement = doc.DocumentNode.Descendants()
-                    .FirstOrDefault(
-                        a =>
-                            a.Name.Equals("p") && a.Attributes["class"] != null &&
-                            a.Attributes["class"].Value.Equals("p-delivery-day-tips"));
-
-                if (shippingElement != null)
-                {
-                    product.short_description = shippingElement.InnerText;
-                }
-
-                product.variations = productVariations;
-                product.attributes = new List<ProductAttribute>();
-                var attributeIndex = 0;
-                foreach (var group in attributeOptionsGroupList)
-                {
-                    var attribute = new ProductAttribute();
-                    attribute.name = group.AttributeName;
-                    attribute.position = attributeIndex;
-                    attribute.visible = true;
-                    attribute.variation = true;
-                    attribute.options = group.Options.Select(a => a.AttributeValue).ToList();
-
-                    attributeIndex++;
-
-                    product.attributes.Add(attribute);
-                }
-
-                product.shipping_required = true;
-                product.shipping_class = "free-international-shipping";
+                HandleShippingInformation(doc, product);
 
                 product.status = postType.ToString().ToLower();
 
@@ -505,13 +171,376 @@ namespace WooCommerce.Automation
             }
         }
 
+        private double getMarkedUpAndConvertedPrice(double price)
+        {
+            price = this.priceMarkupPercentage * price * this.usdToMyrCurrencyRate;
+
+            if (price < this.productMinPriceAfterConvert)
+            {
+                price += this.productBelowMinMarkup;
+            }
+
+            return Math.Round(price, 1);
+        }
+
+        private void HandlePrice(HtmlDocument doc, Product product)
+        {
+            var source = doc.DocumentNode.OuterHtml;
+            var maxPrice = getQuotes(source, "window.runParams.maxPrice");
+
+            if (source.Contains("window.runParams.actMaxPrice"))
+            {
+                var maxDiscountedPrice = getQuotes(source, "window.runParams.actMaxPrice");
+                product.sale_price = getMarkedUpAndConvertedPrice(Double.Parse(maxDiscountedPrice));
+                product.regular_price = getMarkedUpAndConvertedPrice(Double.Parse(maxPrice));
+            }
+            else
+            {
+                product.regular_price = getMarkedUpAndConvertedPrice(Double.Parse(maxPrice));
+            }
+
+        }
+
+        private string getQuotes(string source, string stringToFind)
+        {
+            var index = source.IndexOf(stringToFind);
+            var startIndex = source.IndexOf("\"", index);
+            var endIndex = source.IndexOf("\"", startIndex + 1);
+
+            var inBetween = source.Substring(startIndex, endIndex - startIndex).Trim('"');
+
+            return inBetween;
+        }
+
+        private static void HandleVariationAndAttributes(HtmlDocument doc, Product product, int imageId)
+        {
+            var variationDiv =
+                doc.DocumentNode.Descendants()
+                    .FirstOrDefault(a => a.GetAttributeValue("id", string.Empty).Equals("j-product-info-sku"));
+
+            var attributeOptionsGroupList = new List<AttributeOptionsGroup>();
+
+            if (variationDiv != null)
+            {
+                var dls = variationDiv.Descendants().Where(a => a.Name.Equals("dl"));
+
+                if (dls.Any())
+                {
+                    product.type = "variable";
+                }
+                else
+                {
+                    product.type = "simple";
+                }
+
+                foreach (var dl in dls)
+                {
+                    var attributeName = dl.Descendants().First(a => a.Name.Equals("dt")).InnerText;
+                    var ul = dl.Descendants().First(a => a.Name.Equals("ul"));
+
+                    var attributeOptionsGroup = new AttributeOptionsGroup();
+                    attributeOptionsGroup.AttributeName = attributeName;
+
+
+                    foreach (var li in ul.Descendants().Where(a => a.Name.Equals("li")))
+                    {
+                        var anchor = li.Descendants().First(a => a.Name.Equals("a"));
+                        var anchorTitle = anchor.GetAttributeValue("title", "");
+                        var attributeValue = "";
+                        var attributeImage = "";
+                        if (!string.IsNullOrWhiteSpace(anchorTitle))
+                        {
+                            attributeValue = anchorTitle;
+                            var img = anchor.Descendants().FirstOrDefault(a => a.Name.Equals("img"));
+
+                            if (img != null)
+                            {
+                                attributeImage = img.GetAttributeValue("bigpic", "");
+                            }
+                        }
+                        else
+                        {
+                            var span = anchor.Descendants().First(a => a.Name.Equals("span"));
+                            attributeValue = span.InnerText;
+                        }
+
+                        var attributeOptions = new SingleAttributeOptions();
+                        attributeOptions.ImageUrl = attributeImage;
+                        attributeOptions.AttributeValue = attributeValue;
+                        attributeOptions.Id = imageId;
+                        imageId++;
+                        attributeOptionsGroup.Options.Add(attributeOptions);
+                    }
+
+                    attributeOptionsGroupList.Add(attributeOptionsGroup);
+                }
+            }
+
+            var productVariations = new List<ProductVariations>();
+
+            for (int i = 0; i < 1; i++)
+            {
+                if (attributeOptionsGroupList.Count == 1)
+                {
+                    var firstGroup = attributeOptionsGroupList.ElementAt(0);
+                    foreach (var firstLevel in firstGroup.Options)
+                    {
+                        var variation = new ProductVariations();
+                        variation.id = i;
+                        variation.regular_price = product.regular_price;
+                        variation.sale_price = product.sale_price;
+                        variation.price = product.price;
+
+                        if (!string.IsNullOrWhiteSpace(firstLevel.ImageUrl))
+                        {
+                            variation.image.Add(new ProductImage
+                            {
+                                //position = (short)firstLevel.Id,
+                                src = firstLevel.ImageUrl,
+                                title = firstLevel.AttributeValue,
+                                //id = firstLevel.Id
+                            });
+                        }
+
+                        variation.attributes.Add(new ProductSpecificAttribute
+                        {
+                            name = firstGroup.AttributeName,
+                            option = firstLevel.AttributeValue,
+                            slug = firstGroup.AttributeName
+                        });
+
+                        productVariations.Add(variation);
+                    }
+                }
+                else if (attributeOptionsGroupList.Count == 2)
+                {
+                    var firstGroup = attributeOptionsGroupList.ElementAt(0);
+                    var secondGroup = attributeOptionsGroupList.ElementAt(1);
+
+                    foreach (var firstLevel in firstGroup.Options)
+                    {
+                        foreach (var secondLevel in secondGroup.Options)
+                        {
+                            var variation = new ProductVariations();
+                            variation.regular_price = product.regular_price;
+                            variation.sale_price = product.sale_price;
+                            variation.price = product.price;
+                            variation.id = i;
+
+                            if (!string.IsNullOrWhiteSpace(firstLevel.ImageUrl))
+                            {
+                                variation.image.Add(new ProductImage
+                                {
+                                    //position = (short)firstLevel.Id,
+                                    src = firstLevel.ImageUrl,
+                                    title = firstLevel.AttributeValue,
+                                    //id = firstLevel.Id
+                                });
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(secondLevel.ImageUrl))
+                            {
+                                variation.image.Add(new ProductImage
+                                {
+                                    //position = (short)firstLevel.Id,
+                                    src = secondLevel.ImageUrl,
+                                    title = secondLevel.AttributeValue,
+                                    //id = firstLevel.Id
+                                });
+                            }
+
+                            variation.attributes.Add(new ProductSpecificAttribute
+                            {
+                                name = firstGroup.AttributeName,
+                                option = firstLevel.AttributeValue,
+                                slug = firstGroup.AttributeName
+                            });
+                            variation.attributes.Add(new ProductSpecificAttribute
+                            {
+                                name = secondGroup.AttributeName,
+                                option = secondLevel.AttributeValue,
+                                slug = secondGroup.AttributeName
+                            });
+
+                            productVariations.Add(variation);
+                        }
+                    }
+                }
+            }
+
+            product.variations = productVariations;
+            product.attributes = new List<ProductAttribute>();
+            var attributeIndex = 0;
+            foreach (var group in attributeOptionsGroupList)
+            {
+                var attribute = new ProductAttribute();
+                attribute.name = @group.AttributeName;
+                attribute.position = attributeIndex;
+                attribute.visible = true;
+                attribute.variation = true;
+                attribute.options = @group.Options.Select(a => a.AttributeValue).ToList();
+
+                attributeIndex++;
+
+                product.attributes.Add(attribute);
+            }
+        }
+
+        private static void HandleShippingInformation(HtmlDocument doc, Product product)
+        {
+            var shippingElement = doc.DocumentNode.Descendants()
+                .FirstOrDefault(
+                    a =>
+                        a.Name.Equals("p") && a.Attributes["class"] != null &&
+                        a.Attributes["class"].Value.Equals("p-delivery-day-tips"));
+
+            if (shippingElement != null)
+            {
+                product.short_description = "<b>Free Shipping</b> <br>" + shippingElement.InnerText;
+            }
+
+            product.shipping_required = true;
+            product.shipping_class = "free-international-shipping";
+        }
+
+        private static void HandleTitleAndDescription(HtmlDocument doc, Product product)
+        {
+            var objectId = doc.DocumentNode.Descendants("input")
+                .FirstOrDefault(
+                    a => a.Attributes["name"] != null && a.Attributes["name"].Value.Equals("objectId"))
+                .Attributes["value"]
+                .Value;
+
+            var description =
+                new WebClient().DownloadString("http://desc.aliexpress.com/getDescModuleAjax.htm?productId=" +
+                                               objectId);
+
+            var title =
+                doc.DocumentNode.Descendants("h1")
+                    .FirstOrDefault(
+                        a => a.Attributes["class"] != null && a.Attributes["class"].Value.Equals("product-name"))
+                    .InnerText;
+            var index1 = description.IndexOf('\'') + 1;
+            var index2 = description.LastIndexOf('\'');
+
+            product.title = title;
+            product.description = description.Substring(index1, index2 - index1);
+        }
+
+        private static int HandleImages(HtmlDocument doc, Product product)
+        {
+            var imageUrls = new List<string>();
+
+            var imageThumbnailContainer =
+                doc.DocumentNode.Descendants("ul")
+                    .FirstOrDefault(
+                        a =>
+                            a.Attributes.Contains("class") &&
+                            a.Attributes["class"].Value.Equals("image-thumb-list"));
+
+            if (imageThumbnailContainer != null)
+            {
+                foreach (
+                    HtmlNode link in
+                        imageThumbnailContainer.Descendants("img"))
+                {
+                    var src = link.Attributes["src"].Value;
+                    imageUrls.Add(src);
+                }
+            }
+
+            // If no image urls, means the item only has one image. Take the main image.
+            if (!imageUrls.Any())
+            {
+                var node =
+                    doc.DocumentNode.Descendants().FirstOrDefault(a => a.Name.Equals("div") && a.Id.Equals("magnifier"));
+
+                var img = node.Descendants().FirstOrDefault(a => a.Name.Equals("img") && a.Attributes["src"] != null);
+
+                imageUrls.Add(img.Attributes["src"].Value);
+            }
+
+            var imageId = 0;
+            product.images = imageUrls.Select(a =>
+            {
+                var image = new ProductImage();
+                //image.id = imageId;
+                image.src = a.Replace("50x50", "640x640");
+                image.title = "Image " + imageId;
+                image.position = (short)imageId;
+
+                imageId++;
+                return image;
+            })
+                .ToList();
+            return imageId;
+        }
+
+        private void HandleCategory(HtmlDocument doc, Product product)
+        {
+            var categoriesElement =
+                doc.DocumentNode.Descendants()
+                    .FirstOrDefault(
+                        a => a.Attributes.Contains("class") && a.Attributes["class"].Value.Equals("ui-breadcrumb"));
+
+            var categories = categoriesElement.Descendants().Where(
+                a => a.Name.Equals("a")
+                     && !a.InnerText.Equals("All Categories")
+                     && !a.InnerText.Equals("Home")).Select(a => WebUtility.HtmlDecode(a.InnerText));
+
+            var categoryName = "";
+            var parentCategoryName = "";
+
+            foreach (var category in categories)
+            {
+                var model = GetCategory(wc, category, parentCategoryName);
+                parentCategoryName = category;
+
+                categoryName = model.id.ToString();
+            }
+
+            product.categories = new List<string>();
+            product.categories.Add(categoryName);
+        }
+
+        private static void HandleWeightAndDimension(HtmlDocument doc, Product product)
+        {
+            // packinging details
+            var packagingElements = doc.DocumentNode.Descendants()
+                .Where(a => a.Name.Equals("span") &&
+                            a.Attributes["class"] != null &&
+                            a.Attributes["class"].Value.Equals("packaging-title"));
+
+            var weight = 0.0;
+            var height = 0.0;
+            var width = 0.0;
+            var length = 0.0;
+
+            var weightElement = packagingElements.FirstOrDefault(a => a.InnerText.Contains("Package Weight:"));
+            weight = Double.Parse(weightElement.NextSibling.NextSibling.GetAttributeValue("rel", "0.0"));
+
+            var dimensionElement = packagingElements.FirstOrDefault(a => a.InnerText.Contains("Package Size:"));
+            var dimensionTemp = dimensionElement.NextSibling.NextSibling.GetAttributeValue("rel", "0|0|0");
+            var dimensions = dimensionTemp.Split('|').Select(Double.Parse).ToList();
+            height = dimensions[0];
+            width = dimensions[1];
+            length = dimensions[2];
+
+            product.weight = weight.ToString();
+
+            product.dimensions = new ProductDimension();
+            product.dimensions.height = height.ToString();
+            product.dimensions.width = width.ToString();
+            product.dimensions.length = length.ToString();
+        }
+
         public bool ProductExists(string sku)
         {
             var existingProducts = wc.GetProducts(new Dictionary<string, string>
                 {
-                    {"filter[post_status]","publish,draft" },
-                    {"filter[sku]", sku}
-
+                  {"filter[sku]", sku},
+                    {"filter[post_status]","publish,draft" }
+                  
                 }).Result;
 
             return existingProducts.Any();

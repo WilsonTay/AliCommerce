@@ -41,7 +41,7 @@ namespace WooCommerceNET
                 //json = json.Substring(11, json.Length - 13);
                 //WooError we = JsonConvert.DeserializeObject<WooError>(json);
                 //throw new WCException { WE = we, Message = "" };
-                throw new Exception("Network is unavaliable now, please try again later.");
+                throw new Exception(json);
             }
 
             return json;
